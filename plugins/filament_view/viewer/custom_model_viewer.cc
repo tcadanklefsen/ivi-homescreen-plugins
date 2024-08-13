@@ -56,12 +56,15 @@ CustomModelViewer::CustomModelViewer(PlatformView* platformView,
     filament_api_thread_id_ = pthread_self();
     spdlog::debug("Filament API thread: 0x{:x}", filament_api_thread_id_);
   });
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
   /* Setup Wayland subsurface */
   setupWaylandSubsurface();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
   auto f = Initialize(platformView);
   f.wait();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
   SPDLOG_TRACE("--{}::{}", __FILE__, __FUNCTION__);
 }
@@ -103,6 +106,27 @@ CustomModelViewer* CustomModelViewer::Instance(const std::string& where) {
     SPDLOG_DEBUG("Instance is null {}", where.c_str());
   return m_poInstance;
 }
+
+// Registry listener to bind the wl_compositor
+static void registry_handler(void* data, wl_registry* registry, uint32_t id, const char* interface, uint32_t version) {
+    CustomModelViewer* viewer = static_cast<CustomModelViewer*>(data);
+
+    if (strcmp(interface, wl_compositor_interface.name) == 0) {
+        viewer->vSetCompositor(static_cast<wl_compositor*>(
+            wl_registry_bind(registry, id, &wl_compositor_interface, 1)));
+    }
+    // Handle other global objects here...
+}
+
+static void registry_remover(void* data, wl_registry* registry, uint32_t id) {
+    // Handle global removal if necessary
+}
+
+// Registry listener setup
+static const wl_registry_listener registry_listener = {
+    registry_handler,
+    registry_remover
+};
 
 void CustomModelViewer::setupWaylandSubsurface() {
   // Ensure state_ is properly initialized
@@ -151,7 +175,21 @@ void CustomModelViewer::setupWaylandSubsurface() {
     return;
   }
 
-  wl_subsurface_place_below(subsurface_, parent_surface_);
+  // Obtain the registry
+  // registry_ = wl_display_get_registry(display_);
+  // wl_registry_add_listener(registry_, &registry_listener, this);
+
+  // // Round-trip to ensure registry listeners are called
+  // wl_display_roundtrip(display_);
+
+  // // At this point, compositor_ should be initialized
+  // if (!compositor_) {
+  //     //throw std::runtime_error("Failed to get wl_compositor.");
+  //   spdlog::error("{}::{}::{}", __FILE__, __FUNCTION__, __LINE__);
+  //   return;
+  // }
+
+  wl_subsurface_place_above(subsurface_, parent_surface_);
   wl_subsurface_set_desync(subsurface_);
 }
 
@@ -164,6 +202,9 @@ std::future<bool> CustomModelViewer::Initialize(PlatformView* platformView) {
   auto future(promise->get_future());
 
   asio::post(*strand_, [&, promise, platformView] {
+
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
+
     auto platform_view_size = platformView->GetSize();
     native_window_ = {
         .display = display_,
@@ -171,16 +212,25 @@ std::future<bool> CustomModelViewer::Initialize(PlatformView* platformView) {
         .width = static_cast<uint32_t>(platform_view_size.first),
         .height = static_cast<uint32_t>(platform_view_size.second)};
 
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
     fengine_ = ::filament::Engine::create(::filament::Engine::Backend::VULKAN);
     fswapChain_ = fengine_->createSwapChain(&native_window_);
     frenderer_ = fengine_->createRenderer();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
+
+    //::filament::renderer::ClearOptions options;
+    //options.clearColor = math::float4(0,0,0,0);
+    //frenderer_->setClearOptions(options);
 
     fscene_ = fengine_->createScene();
     fview_ = fengine_->createView();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
     setupView();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
     modelLoader_ = std::make_unique<ModelLoader>();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
     promise->set_value(true);
   });
@@ -233,12 +283,12 @@ void CustomModelViewer::setupView() {
 
   // on mobile, better use lower quality color buffer
   ::filament::View::RenderQuality renderQuality{};
-  renderQuality.hdrColorBuffer = ::filament::View::QualityLevel::MEDIUM;
+  renderQuality.hdrColorBuffer = ::filament::View::QualityLevel::ULTRA;
   fview_->setRenderQuality(renderQuality);
 
   // dynamic resolution often helps a lot
   fview_->setDynamicResolutionOptions(
-      {.enabled = true, .quality = ::filament::View::QualityLevel::MEDIUM});
+      {.enabled = true, .quality = ::filament::View::QualityLevel::ULTRA});
 
   // MSAA is needed with dynamic resolution MEDIUM
   fview_->setMultiSampleAntiAliasingOptions({.enabled = true});
@@ -323,16 +373,24 @@ void CustomModelViewer::OnFrame(void* data,
 
   obj->DrawFrame(time);
 
+  // Set the opaque region
+  // struct wl_region* opaque_region = wl_compositor_create_region(obj->compositor_);
+  // wl_region_add(opaque_region, 0, 0, 400, 600);
+  
+  // wl_surface_set_opaque_region(obj->surface_, opaque_region);
+
   obj->callback_ = wl_surface_frame(obj->surface_);
   wl_callback_add_listener(obj->callback_, &CustomModelViewer::frame_listener,
                            data);
 
   // Z-Order
   // These do not need <seem> to need to be called every frame.
-  // wl_subsurface_place_below(obj->subsurface_, obj->parent_surface_);
+  //wl_subsurface_place_below(obj->subsurface_, obj->parent_surface_);
   wl_subsurface_set_position(obj->subsurface_, obj->left_, obj->top_);
 
   wl_surface_commit(obj->surface_);
+
+  //wl_region_destroy(opaque_region);
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -349,6 +407,7 @@ void CustomModelViewer::setOffset(double left, double top) {
 }
 
 void CustomModelViewer::resize(double width, double height) {
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
   fview_->setViewport({left_, top_, static_cast<uint32_t>(width),
                        static_cast<uint32_t>(height)});
   cameraManager_->updateCameraOnResize(static_cast<uint32_t>(width),

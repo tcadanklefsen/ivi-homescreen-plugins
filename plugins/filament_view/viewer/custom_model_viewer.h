@@ -142,6 +142,10 @@ class CustomModelViewer {
 
   static CustomModelViewer* Instance(const std::string& where);
 
+  void vSetCompositor(wl_compositor* poCompositor) {
+    compositor_ = poCompositor;
+  }
+
  private:
   static CustomModelViewer* m_poInstance;
 
@@ -172,6 +176,8 @@ class CustomModelViewer {
   wl_surface* parent_surface_{};
   wl_callback* callback_;
   wl_subsurface* subsurface_{};
+  wl_compositor* compositor_;
+  wl_registry* registry_;
 
   struct _native_window {
     struct wl_display* display;

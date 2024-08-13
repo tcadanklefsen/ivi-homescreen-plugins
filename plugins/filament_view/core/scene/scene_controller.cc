@@ -36,17 +36,27 @@ SceneController::SceneController(PlatformView* platformView,
       models_(models),
       shapes_(shapes) {
   SPDLOG_TRACE("++{} {}", __FILE__, __FUNCTION__);
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
   setUpViewer(platformView, state);
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
   setUpLoadingModels();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
   setUpGround();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
   setUpCamera();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
   setUpSkybox();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
   setUpLight();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
   setUpIndirectLight();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
   setUpShapes();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
   modelViewer_->setInitialized();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
   SPDLOG_TRACE("--{} {}", __FILE__, __FUNCTION__);
 }
@@ -57,9 +67,14 @@ SceneController::~SceneController() {
 
 void SceneController::setUpViewer(PlatformView* platformView,
                                   FlutterDesktopEngineState* state) {
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
+  
   modelViewer_ = std::make_unique<CustomModelViewer>(platformView, state,
                                                      flutterAssetsPath_);
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
+  
   materialManager_ = std::make_unique<MaterialManager>();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
   // TODO surfaceView.setOnTouchListener(modelViewer)
   //  surfaceView.setZOrderOnTop(true) // necessary
@@ -67,14 +82,29 @@ void SceneController::setUpViewer(PlatformView* platformView,
   auto view = modelViewer_->getFilamentView();
   auto scene = modelViewer_->getFilamentScene();
 
+  // auto clearOptions = filament::Renderer::ClearOptions();
+  // clearOptions.clearColor[0] = 0;
+  // clearOptions.clearColor[1] = 0;
+  // clearOptions.clearColor[2] = 0;
+  // clearOptions.clearColor[3] = 0;
+  // clearOptions.clear = false;
+  // modelViewer_->getFilamentRenderer()->setClearOptions(clearOptions);
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
+
   auto size = platformView->GetSize();
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
+
   view->setViewport({0, 0, static_cast<uint32_t>(size.first),
                      static_cast<uint32_t>(size.second)});
-
+  
   view->setScene(scene);
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
 
   // TODO this may need to be turned off for target
   view->setPostProcessingEnabled(true);
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
+
+  makeSurfaceViewTransparent();
 }
 
 void SceneController::setUpGround() {
@@ -346,6 +376,9 @@ Resource<std::string_view> SceneController::loadModel(Model* model) {
 
 // TODO Move to model viewer
 void SceneController::makeSurfaceViewTransparent() {
+
+SPDLOG_DEBUG("ALLEN DEBUG {} {}", __LINE__, __FUNCTION__);
+
   modelViewer_->getFilamentView()->setBlendMode(
       ::filament::View::BlendMode::TRANSLUCENT);
 
